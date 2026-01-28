@@ -8,9 +8,8 @@
   <title>Shandy | Premium Anonymous Video Chat</title>
   <script>
     window.global = window;
-    window.process = { env: {} };
+    window.process = { env: { NODE_ENV: 'production' } };
   </script>
-  <script type="module" src="/src/main.jsx"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link

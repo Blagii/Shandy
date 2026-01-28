@@ -4,7 +4,7 @@ import Peer from 'simple-peer';
 import { Video, VideoOff, Mic, MicOff, Send, SkipForward, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const socket = io('http://localhost:5000');
+const socket = io('https://shandy.onrender.com');
 
 const VideoChat = () => {
     const [stream, setStream] = useState(null);
@@ -225,8 +225,8 @@ const VideoChat = () => {
                                     <span className="text-[10px] text-slate-600">{msg.time}</span>
                                 </div>
                                 <div className={`px-4 py-3 rounded-2xl max-w-[90%] text-[14px] leading-relaxed shadow-sm ${msg.from === 'You'
-                                        ? 'bg-gradient-to-tr from-violet-600 to-indigo-600 text-white rounded-tr-none'
-                                        : 'bg-white/5 border border-white/10 text-slate-200 rounded-tl-none'
+                                    ? 'bg-gradient-to-tr from-violet-600 to-indigo-600 text-white rounded-tr-none'
+                                    : 'bg-white/5 border border-white/10 text-slate-200 rounded-tl-none'
                                     }`}>
                                     {msg.text}
                                 </div>

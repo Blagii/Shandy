@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import { Shield, Ban, Users, Activity, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const socket = io('http://localhost:5000');
+const socket = io('https://shandy.onrender.com');
 
 const AdminPanel = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);

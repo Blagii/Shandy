@@ -4,7 +4,9 @@ import Peer from 'simple-peer';
 import { Video, VideoOff, Mic, MicOff, Send, SkipForward, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const socket = io('https://shandy.onrender.com');
+const socket = io('https://shandy.onrender.com', {
+    transports: ['websocket']
+});
 
 const VideoChat = () => {
     const [stream, setStream] = useState(null);

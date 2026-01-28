@@ -3,7 +3,9 @@ import io from 'socket.io-client';
 import { Shield, Ban, Users, Activity, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const socket = io('https://shandy.onrender.com');
+const socket = io('https://shandy.onrender.com', {
+    transports: ['websocket']
+});
 
 const AdminPanel = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);

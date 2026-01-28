@@ -8,6 +8,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  base: '/',
   define: {
     global: 'globalThis',
     'process.env': {},

@@ -11,10 +11,12 @@ const io = new Server(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
-    }
+    },
+    pingTimeout: 60000,
+    pingInterval: 25000
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // simple in-memory storage
 let onlineUsers = new Map(); // socketId -> { ip, partnerId }
@@ -22,23 +24,17 @@ let queue = [];
 let bannedIPs = new Set();
 
 io.on('connection', (socket) => {
-    const ip = socket.handshake.address;
+    const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
 
-    // Check if banned
     if (bannedIPs.has(ip)) {
-        console.log(`Banned IP tried to connect: ${ip}`);
         socket.disconnect();
         return;
     }
 
-    console.log(`User connected: ${socket.id} (${ip})`);
     onlineUsers.set(socket.id, { ip, partnerId: null });
 
-    // Handle finding a partner
-    socket.on('joinQueue', () => {
-        // If already in a call, disconnect from partner
+    socket.on('next', () => {
         disconnectFromPartner(socket.id);
-
         if (!queue.includes(socket.id)) {
             queue.push(socket.id);
         }
@@ -47,23 +43,25 @@ io.on('connection', (socket) => {
 
     socket.on('signal', (data) => {
         const { to, signal } = data;
-        io.to(to).emit('signal', { from: socket.id, signal });
+        if (onlineUsers.has(to)) {
+            io.to(to).emit('signal', { from: socket.id, signal });
+        }
     });
 
     socket.on('sendMessage', (data) => {
         const user = onlineUsers.get(socket.id);
         if (user && user.partnerId) {
             io.to(user.partnerId).emit('message', {
-                from: socket.id,
+                from: 'Stranger',
                 text: data.text
             });
         }
     });
 
-    socket.on('next', () => {
+    socket.on('disconnect', () => {
         disconnectFromPartner(socket.id);
-        queue.push(socket.id);
-        matchUsers();
+        onlineUsers.delete(socket.id);
+        queue = queue.filter(id => id !== socket.id);
     });
 
     // Admin Events
@@ -73,25 +71,6 @@ io.on('connection', (socket) => {
             socket.emit('admin_auth_success');
         }
     });
-
-    socket.on('admin_ban_user', (targetSocketId) => {
-        const targetUser = onlineUsers.get(targetSocketId);
-        if (targetUser) {
-            bannedIPs.add(targetUser.ip);
-            const socketToDisconnect = io.sockets.sockets.get(targetSocketId);
-            if (socketToDisconnect) {
-                socketToDisconnect.disconnect();
-            }
-            console.log(`IP ${targetUser.ip} banned by admin.`);
-        }
-    });
-
-    socket.on('disconnect', () => {
-        disconnectFromPartner(socket.id);
-        onlineUsers.delete(socket.id);
-        queue = queue.filter(id => id !== socket.id);
-        console.log(`User disconnected: ${socket.id}`);
-    });
 });
 
 function disconnectFromPartner(socketId) {
@@ -99,15 +78,13 @@ function disconnectFromPartner(socketId) {
     if (user && user.partnerId) {
         const partnerId = user.partnerId;
         const partner = onlineUsers.get(partnerId);
-        
+
         if (partner) {
             partner.partnerId = null;
             io.to(partnerId).emit('partnerDisconnected');
         }
-        
         user.partnerId = null;
     }
-    // Remove from queue if they were in it
     queue = queue.filter(id => id !== socketId);
 }
 
@@ -123,21 +100,19 @@ function matchUsers() {
             user1.partnerId = user2Id;
             user2.partnerId = user1Id;
 
-            // user1 is the initiator
             io.to(user1Id).emit('matchFound', { partnerId: user2Id, initiator: true });
             io.to(user2Id).emit('matchFound', { partnerId: user1Id, initiator: false });
+        } else {
+            if (user1) queue.push(user1Id);
+            if (user2) queue.push(user2Id);
         }
     }
 }
 
-// Stats Update every 5 seconds
 setInterval(() => {
     const stats = {
         onlineCount: onlineUsers.size,
-        users: Array.from(onlineUsers.entries()).map(([id, data]) => ({
-            id,
-            ip: data.ip
-        }))
+        users: Array.from(onlineUsers.entries()).map(([id, data]) => ({ id, ip: data.ip }))
     };
     io.to('admins').emit('statsUpdate', stats);
 }, 5000);
